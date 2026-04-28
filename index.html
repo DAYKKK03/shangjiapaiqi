@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="面向本地生活商家代运营的视频库存、断更预警与拍摄排期工具。"
+    />
+    <meta name="theme-color" content="#b8562e" />
+    <title>不断更排期台</title>
+    <link rel="apple-touch-icon" href="icon-512.png" />
+    <link rel="manifest" href="./app.webmanifest" />
+    <link rel="stylesheet" href="./app.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Local Business Content Ops</p>
+          <h1>不断更排期台</h1>
+          <p class="hero-copy">
+            用一套面向代运营的库存和生产排期工具，盯住谁快断更、下一批最晚什么时候开工。
+          </p>
+        </div>
+        <div class="hero-panel">
+          <label class="field">
+            <span>排期基准日</span>
+            <input id="planning-date" type="date" />
+          </label>
+          <div class="hero-actions">
+            <button id="reset-demo" class="ghost-button">恢复示例数据</button>
+            <button id="export-data" class="primary-button">导出数据</button>
+          </div>
+        </div>
+      </header>
+
+      <section id="overview-metrics" class="metrics-grid"></section>
+
+      <section class="workspace-grid">
+        <div class="panel panel-wide">
+          <div class="section-header">
+            <div>
+              <p class="section-kicker">Merchant Inventory</p>
+              <h2>商家总览</h2>
+            </div>
+            <button id="open-merchant-modal" class="primary-button">
+              新建商家
+            </button>
+          </div>
+          <div id="merchant-cards" class="merchant-cards"></div>
+        </div>
+
+        <div class="panel">
+          <div class="section-header">
+            <div>
+              <p class="section-kicker">Today Focus</p>
+              <h2>风险雷达</h2>
+            </div>
+          </div>
+          <div id="alert-list" class="alert-list"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-header">
+          <div>
+            <p class="section-kicker">Production Board</p>
+            <h2>拍摄批次看板</h2>
+          </div>
+          <button id="open-batch-modal" class="primary-button">新建批次</button>
+        </div>
+        <div id="batch-board" class="kanban-board"></div>
+      </section>
+
+      <section class="panel">
+        <div class="section-header">
+          <div>
+            <p class="section-kicker">Calendar Board</p>
+            <h2>日历看板</h2>
+          </div>
+        </div>
+        <div id="calendar-month-meta" class="calendar-month-meta"></div>
+        <div id="calendar-board" class="calendar-board"></div>
+        <div id="calendar-selected-panel" class="calendar-selected-panel"></div>
+      </section>
+    </div>
+
+    <dialog id="merchant-modal" class="modal">
+      <form id="merchant-form" class="modal-form" method="dialog">
+        <div class="modal-head">
+          <div>
+            <p class="section-kicker">Merchant Setup</p>
+            <h3 id="merchant-modal-title">新建商家</h3>
+          </div>
+          <button type="button" class="icon-button" data-close-modal="merchant-modal">
+            ×
+          </button>
+        </div>
+
+        <input type="hidden" id="merchant-id" />
+
+        <label class="field">
+          <span>商家名称</span>
+          <input id="merchant-name" type="text" required />
+        </label>
+
+        <div class="field-grid">
+          <label class="field">
+            <span>发片规则类型</span>
+            <select id="merchant-rule-type" required>
+              <option value="odd">单数日</option>
+              <option value="even">双数日</option>
+              <option value="weekdays">自定义周几</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>当前可发库存</span>
+            <input id="merchant-inventory" type="number" min="0" required />
+          </label>
+        </div>
+
+        <div class="field-grid">
+          <label class="field">
+            <span>每次拍摄产出</span>
+            <input id="merchant-batch-output" type="number" min="1" value="3" required />
+          </label>
+          <label class="field">
+            <span>备注</span>
+            <input id="merchant-notes" type="text" />
+          </label>
+        </div>
+
+        <fieldset id="weekday-selector" class="weekday-selector">
+          <legend>发片周几</legend>
+          <label><input type="checkbox" value="1" />周一</label>
+          <label><input type="checkbox" value="2" />周二</label>
+          <label><input type="checkbox" value="3" />周三</label>
+          <label><input type="checkbox" value="4" />周四</label>
+          <label><input type="checkbox" value="5" />周五</label>
+          <label><input type="checkbox" value="6" />周六</label>
+          <label><input type="checkbox" value="0" />周日</label>
+        </fieldset>
+
+        <div class="modal-actions">
+          <button type="button" class="ghost-button" data-close-modal="merchant-modal">
+            取消
+          </button>
+          <button type="submit" class="primary-button">保存商家</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="batch-modal" class="modal">
+      <form id="batch-form" class="modal-form" method="dialog">
+        <div class="modal-head">
+          <div>
+            <p class="section-kicker">Batch Setup</p>
+            <h3 id="batch-modal-title">新建拍摄批次</h3>
+          </div>
+          <button type="button" class="icon-button" data-close-modal="batch-modal">
+            ×
+          </button>
+        </div>
+
+        <input type="hidden" id="batch-id" />
+
+        <div class="field-grid">
+          <label class="field">
+            <span>所属商家</span>
+            <select id="batch-merchant-id" required></select>
+          </label>
+          <label class="field">
+            <span>计划拍摄条数</span>
+            <input id="batch-planned-count" type="number" min="1" value="3" required />
+          </label>
+        </div>
+
+        <div class="field-grid">
+          <label class="field">
+            <span>目标接上发布日期</span>
+            <input id="batch-target-date" type="date" required />
+          </label>
+          <label class="field">
+            <span>当前阶段</span>
+            <select id="batch-stage" required>
+              <option value="todo-script">待写脚本</option>
+              <option value="todo-shoot">待拍摄</option>
+              <option value="editing">剪辑中</option>
+              <option value="delivery">待交付</option>
+              <option value="done">已完成</option>
+              <option value="overdue">已逾期</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="field">
+          <span>备注</span>
+          <input id="batch-notes" type="text" />
+        </label>
+
+        <div class="modal-actions">
+          <button type="button" class="ghost-button" data-close-modal="batch-modal">
+            取消
+          </button>
+          <button type="submit" class="primary-button">保存批次</button>
+        </div>
+      </form>
+    </dialog>
+
+    <template id="merchant-card-template">
+      <article class="merchant-card">
+        <div class="merchant-card-top">
+          <div>
+            <p class="merchant-rule"></p>
+            <h3 class="merchant-name"></h3>
+          </div>
+          <span class="risk-pill"></span>
+        </div>
+        <div class="merchant-stats">
+          <div>
+            <span>库存</span>
+            <strong class="inventory-count"></strong>
+          </div>
+          <div>
+            <span>还能发到</span>
+            <strong class="safe-until"></strong>
+          </div>
+          <div>
+            <span>断更日</span>
+            <strong class="break-date"></strong>
+          </div>
+        </div>
+        <div class="publish-grid"></div>
+        <div class="merchant-actions">
+          <button class="ghost-button card-edit-button">编辑</button>
+          <button class="ghost-button inventory-button">库存 +3</button>
+          <button class="primary-button batch-button">建批次</button>
+        </div>
+      </article>
+    </template>
+
+    <template id="batch-column-template">
+      <section class="merchant-plan-card">
+        <div class="merchant-plan-head">
+          <div>
+            <p class="batch-merchant"></p>
+            <h3 class="batch-name"></h3>
+          </div>
+          <span class="column-count"></span>
+        </div>
+        <div class="merchant-plan-summary"></div>
+        <div class="merchant-plan-editor"></div>
+        <div class="kanban-list"></div>
+      </section>
+    </template>
+
+    <template id="batch-card-template">
+      <article class="batch-card">
+        <div class="batch-card-top">
+          <div>
+            <p class="batch-merchant"></p>
+            <h4 class="batch-name"></h4>
+          </div>
+          <button class="icon-button batch-edit-button">✎</button>
+        </div>
+        <div class="batch-meta"></div>
+        <div class="batch-deadlines"></div>
+        <div class="batch-actions"></div>
+      </article>
+    </template>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
