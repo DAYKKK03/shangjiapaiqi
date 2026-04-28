@@ -12,6 +12,7 @@
     <link rel="apple-touch-icon" href="icon-512.png" />
     <link rel="manifest" href="./app.webmanifest" />
     <link rel="stylesheet" href="./app.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   </head>
   <body>
     <div class="page-shell">
@@ -29,6 +30,7 @@
             <input id="planning-date" type="date" />
           </label>
           <div class="hero-actions">
+            <button id="open-sync-modal" class="ghost-button">☁️ 云同步</button>
             <button id="reset-demo" class="ghost-button">恢复示例数据</button>
             <button id="export-data" class="primary-button">导出数据</button>
           </div>
@@ -204,6 +206,37 @@
             取消
           </button>
           <button type="submit" class="primary-button">保存批次</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="sync-modal" class="modal">
+      <form id="sync-form" class="modal-form" method="dialog">
+        <div class="modal-head">
+          <div>
+            <p class="section-kicker">Cloud Sync</p>
+            <h3>云同步设置</h3>
+          </div>
+          <button type="button" class="icon-button" data-close-modal="sync-modal">
+            ×
+          </button>
+        </div>
+
+        <p class="help-text">接入 Supabase 即可实现手机与电脑实时同步数据。</p>
+
+        <label class="field">
+          <span>Supabase URL</span>
+          <input id="supabase-url" type="url" placeholder="https://xyz.supabase.co" />
+        </label>
+
+        <label class="field">
+          <span>Supabase Anon Key</span>
+          <input id="supabase-key" type="password" placeholder="你的公共密钥" />
+        </label>
+
+        <div class="modal-actions">
+          <button type="button" id="test-sync" class="ghost-button">测试并同步</button>
+          <button type="submit" class="primary-button">保存配置</button>
         </div>
       </form>
     </dialog>

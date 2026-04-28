@@ -1,4 +1,7 @@
 const STORAGE_KEY = "merchant-content-ops-v1";
+const SYNC_CONFIG_KEY = "merchant-ops-sync-config";
+
+let supabaseClient = null;
 
 const STAGES = [
   { id: "todo-script", label: "待写脚本" },
@@ -39,6 +42,10 @@ const refs = {
   planningDate: document.getElementById("planning-date"),
   merchantModal: document.getElementById("merchant-modal"),
   batchModal: document.getElementById("batch-modal"),
+  syncModal: document.getElementById("sync-modal"),
+  syncForm: document.getElementById("sync-form"),
+  supabaseUrl: document.getElementById("supabase-url"),
+  supabaseKey: document.getElementById("supabase-key"),
   merchantForm: document.getElementById("merchant-form"),
   batchForm: document.getElementById("batch-form"),
   merchantId: document.getElementById("merchant-id"),
@@ -63,6 +70,7 @@ init();
 function init() {
   syncPlanningDateToToday();
   refs.planningDate.value = state.planningDate;
+  initSupabase();
   bindEvents();
   render();
 }
@@ -89,6 +97,12 @@ function bindEvents() {
     .getElementById("open-batch-modal")
     .addEventListener("click", () => openBatchModal());
 
+  document
+    .getElementById("open-sync-modal")
+    .addEventListener("click", () => openSyncModal());
+
+  document.getElementById("test-sync").addEventListener("click", testAndSync);
+
   refs.merchantRuleType.addEventListener("change", toggleWeekdaySelector);
 
   refs.merchantForm.addEventListener("submit", (event) => {
@@ -99,6 +113,11 @@ function bindEvents() {
   refs.batchForm.addEventListener("submit", (event) => {
     event.preventDefault();
     saveBatch();
+  });
+
+  refs.syncForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    saveSyncConfig();
   });
 
   document.querySelectorAll("[data-close-modal]").forEach((button) => {
@@ -988,6 +1007,117 @@ function syncPlanningDateToToday() {
   }
 }
 
+function persistState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  pushToCloud();
+}
+
+async function pushToCloud() {
+  if (!supabaseClient) return;
+  try {
+    const { error } = await supabaseClient
+      .from("app_state")
+      .upsert({ id: 1, content: state, updated_at: new Date() });
+    if (error) throw error;
+    console.log("Synced to cloud");
+  } catch (err) {
+    console.error("Cloud sync failed:", err);
+  }
+}
+
+async function pullFromCloud() {
+  if (!supabaseClient) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from("app_state")
+      .select("content")
+      .eq("id", 1)
+      .single();
+    if (error && error.code !== "PGRST116") throw error;
+    if (data && data.content) {
+      state = data.content;
+      render();
+      console.log("Pulled from cloud");
+    }
+  } catch (err) {
+    console.error("Cloud pull failed:", err);
+  }
+}
+
+function initSupabase() {
+  const configRaw = localStorage.getItem(SYNC_CONFIG_KEY);
+  if (!configRaw) return;
+  try {
+    const config = JSON.parse(configRaw);
+    if (config.url && config.key) {
+      supabaseClient = supabase.createClient(config.url, config.key);
+      pullFromCloud();
+    }
+  } catch (err) {
+    console.error("Failed to init Supabase:", err);
+  }
+}
+
+function openSyncModal() {
+  const configRaw = localStorage.getItem(SYNC_CONFIG_KEY);
+  if (configRaw) {
+    const config = JSON.parse(configRaw);
+    refs.supabaseUrl.value = config.url || "";
+    refs.supabaseKey.value = config.key || "";
+  }
+  refs.syncModal.showModal();
+}
+
+function saveSyncConfig() {
+  const config = {
+    url: refs.supabaseUrl.value.trim(),
+    key: refs.supabaseKey.value.trim(),
+  };
+  localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify(config));
+  initSupabase();
+  refs.syncModal.close();
+}
+
+async function testAndSync() {
+  const url = refs.supabaseUrl.value.trim();
+  const key = refs.supabaseKey.value.trim();
+  if (!url || !key) {
+    alert("请先填写 URL 和 Key");
+    return;
+  }
+
+  const btn = document.getElementById("test-sync");
+  const originalText = btn.textContent;
+  btn.textContent = "同步中...";
+  btn.disabled = true;
+
+  try {
+    const client = supabase.createClient(url, key);
+    // 尝试读取数据
+    const { data, error } = await client.from("app_state").select("*").limit(1);
+    
+    if (error) {
+      if (error.message.includes("relation \"public.app_state\" does not exist")) {
+        alert("连接成功，但数据库中缺少 'app_state' 表，请先在 Supabase 中创建该表。");
+      } else {
+        throw error;
+      }
+      return;
+    }
+
+    supabaseClient = client;
+    localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify({ url, key }));
+    await pullFromCloud();
+    alert("同步成功！");
+    refs.syncModal.close();
+  } catch (err) {
+    alert("连接失败: " + err.message);
+  } finally {
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
+}
+
 function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return createDemoState();
@@ -1007,6 +1137,7 @@ function loadState() {
 
 function persistState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  pushToCloud();
 }
 
 function exportData() {
