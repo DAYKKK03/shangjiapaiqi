@@ -78,7 +78,11 @@ function init() {
   refs.planningDate.value = state.planningDate;
   initSupabase();
   bindEvents();
-  render();
+  // 初始化 Supabase 后，再同步日历日期到今天，确保不会被云端旧数据覆盖
+  setTimeout(() => {
+    syncCalendarDateToToday();
+    render();
+  }, 100);
 }
 
 function bindEvents() {
@@ -1038,6 +1042,14 @@ function syncPlanningDateToToday() {
   }
 }
 
+function syncCalendarDateToToday() {
+  const calibratedToday = todayKey();
+  if (state.calendarDate !== calibratedToday) {
+    state.calendarDate = calibratedToday;
+    persistState();
+  }
+}
+
 function persistState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   pushToCloud();
@@ -1066,7 +1078,15 @@ async function pullFromCloud() {
       .single();
     if (error && error.code !== "PGRST116") throw error;
     if (data && data.content) {
-      state = data.content;
+      // 合并云端数据，但保留本地新增的字段
+      state = {
+        ...data.content,
+        calendarDate: state.calendarDate,
+      };
+      // 确保 calendarDate 存在
+      if (!state.calendarDate) {
+        state.calendarDate = todayKey();
+      }
       render();
       console.log("Pulled from cloud");
     }
