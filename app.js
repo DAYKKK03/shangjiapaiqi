@@ -440,8 +440,9 @@ function renderCalendarSelectedPanel(calendarModel) {
 }
 
 function buildMerchantView(merchant, planningDate) {
-  const publishDates = getNextPublishDates(merchant, planningDate, 8);
   const inventory = Number(merchant.inventory) || 0;
+  const neededDates = Math.max(inventory + 5, 30);
+  const publishDates = getNextPublishDates(merchant, planningDate, neededDates);
   const safeUntil = inventory > 0 ? publishDates[inventory - 1] ?? null : null;
   const breakDate = publishDates[inventory] ?? null;
   const scriptDeadline = breakDate ? shiftDate(breakDate, -3) : null;
