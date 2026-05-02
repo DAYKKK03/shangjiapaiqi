@@ -213,6 +213,12 @@ h1 {
   margin-bottom: 18px;
 }
 
+.calendar-nav {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .merchant-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));

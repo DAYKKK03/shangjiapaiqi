@@ -30,6 +30,9 @@ let state = loadState();
 if (!state.selectedCalendarDate) {
   state.selectedCalendarDate = state.planningDate;
 }
+if (!state.calendarDate) {
+  state.calendarDate = todayKey();
+}
 
 const refs = {
   metrics: document.getElementById("overview-metrics"),
@@ -39,6 +42,9 @@ const refs = {
   calendarBoard: document.getElementById("calendar-board"),
   calendarMonthMeta: document.getElementById("calendar-month-meta"),
   calendarSelectedPanel: document.getElementById("calendar-selected-panel"),
+  prevMonth: document.getElementById("prev-month"),
+  todayMonth: document.getElementById("today-month"),
+  nextMonth: document.getElementById("next-month"),
   planningDate: document.getElementById("planning-date"),
   merchantModal: document.getElementById("merchant-modal"),
   batchModal: document.getElementById("batch-modal"),
@@ -120,6 +126,28 @@ function bindEvents() {
     saveSyncConfig();
   });
 
+  refs.prevMonth.addEventListener("click", () => {
+    const current = new Date(`${state.calendarDate}T00:00:00`);
+    current.setMonth(current.getMonth() - 1);
+    state.calendarDate = toDateKey(current);
+    persistState();
+    render();
+  });
+
+  refs.todayMonth.addEventListener("click", () => {
+    state.calendarDate = todayKey();
+    persistState();
+    render();
+  });
+
+  refs.nextMonth.addEventListener("click", () => {
+    const current = new Date(`${state.calendarDate}T00:00:00`);
+    current.setMonth(current.getMonth() + 1);
+    state.calendarDate = toDateKey(current);
+    persistState();
+    render();
+  });
+
   document.querySelectorAll("[data-close-modal]").forEach((button) => {
     button.addEventListener("click", () => {
       document.getElementById(button.dataset.closeModal).close();
@@ -132,7 +160,7 @@ function render() {
     .map((merchant) => buildMerchantView(merchant, state.planningDate))
     .sort(sortMerchantsByRisk);
   const batchViews = buildBoardBatchViews(merchantViews, state.batches, state.planningDate);
-  const calendarModel = buildCalendarMonth(merchantViews, batchViews, state.planningDate);
+  const calendarModel = buildCalendarMonth(merchantViews, batchViews, state.calendarDate);
 
   renderMetrics(merchantViews, batchViews);
   renderMerchantCards(merchantViews);
@@ -813,9 +841,9 @@ function getDefaultStage(planningDate, scriptDate, shootDate, editDate, breakDat
   return "delivery";
 }
 
-function buildCalendarMonth(merchantViews, batchViews, planningDate) {
+function buildCalendarMonth(merchantViews, batchViews, calendarDate) {
   const eventsByDate = new Map();
-  const currentDate = new Date(`${planningDate}T00:00:00`);
+  const currentDate = new Date(`${calendarDate}T00:00:00`);
   const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
   const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
   const startOffset = (monthStart.getDay() + 6) % 7;
@@ -865,13 +893,14 @@ function buildCalendarMonth(merchantViews, batchViews, planningDate) {
     });
   });
 
+  const realToday = todayKey();
   const cells = Array.from(eventsByDate.entries()).map(([date, events]) => {
     const rawDate = new Date(`${date}T00:00:00`);
     return {
       date,
       events,
       isCurrentMonth: rawDate.getMonth() === currentDate.getMonth(),
-      isToday: date === planningDate,
+      isToday: date === realToday,
     };
   });
 
@@ -958,6 +987,7 @@ function todayKey() {
 function createDemoState() {
   return {
     planningDate: todayKey(),
+    calendarDate: todayKey(),
     merchants: [
       {
         id: "merchant-miaoyan",
@@ -1127,6 +1157,7 @@ function loadState() {
     return {
       planningDate: parsed.planningDate || todayKey(),
       selectedCalendarDate: parsed.selectedCalendarDate || parsed.planningDate || todayKey(),
+      calendarDate: parsed.calendarDate || todayKey(),
       merchants: Array.isArray(parsed.merchants) ? parsed.merchants : [],
       batches: Array.isArray(parsed.batches) ? parsed.batches : [],
     };
