@@ -249,6 +249,10 @@ function renderMerchantCards(merchantViews) {
       });
     });
 
+    node.querySelector(".delete-button").addEventListener("click", () => {
+      deleteMerchant(merchantView.id);
+    });
+
     refs.merchantCards.appendChild(node);
   });
 }
@@ -708,6 +712,17 @@ function saveMerchant() {
 
   persistState();
   refs.merchantModal.close();
+  render();
+}
+
+function deleteMerchant(merchantId) {
+  if (!window.confirm("确定要删除这个商家吗？相关的拍摄批次也会被删除。")) {
+    return;
+  }
+  
+  state.merchants = state.merchants.filter((m) => m.id !== merchantId);
+  state.batches = state.batches.filter((b) => b.merchantId !== merchantId);
+  persistState();
   render();
 }
 
